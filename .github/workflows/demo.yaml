@@ -1,0 +1,48 @@
+name: Build Community Platform
+on: [push]
+jobs:
+  create-runner:
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.create-runner.outputs.label }}
+    steps:
+      - id: create-runner
+        uses: related-sciences/gce-github-runner@10375f058926115c84fadc2b53a0dcda5a528a51
+        with:
+          token: ${{ secrets.GH_ACTIONS_RUNNER_TOKEN }}
+          project_id: ${{ secrets.GOOGLE_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SERVICE_KEY }}
+          image_project: ubuntu-os-cloud
+          image_family: ubuntu-2004-lts
+
+        env:
+          GOOGLE_CLOUD_PROJECT: aptos-global
+  test:
+    needs: create-runner
+    runs-on: ${{ needs.create-runner.outputs.label }}
+    steps:
+      - run: echo "This runs on the GCE VM"
+      - uses: related-sciences/gce-github-runner@10375f058926115c84fadc2b53a0dcda5a528a51
+        with:
+          command: stop
+        if: always()
+  # BuildAndPush:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check out repository code
+  #       uses: actions/checkout@v3
+  #     - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+  #     - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+  #     - name: Login to GAR
+  #       uses: docker/login-action@v2
+  #       with:
+  #         registry: ${{ secrets.GOOGLE_COMPUTE_REGION }}-docker.pkg.dev
+  #         username: _json_key
+  #         password: ${{ secrets.GCP_SERVICE_KEY }}
+  #     - env:
+  #         GCP_DOCKER_ARTIFACT_REPO: ${{ secrets.GCP_DOCKER_ARTIFACT_REPO }}
+  #       run: |
+  #         set -e
+  #         cd ecosystem/platform/server
+  #         docker buildx create --use
+  #         GIT_SHA1=${GITHUB_SHA} docker buildx bake --progress=plain --push -f ./docker-bake.hcl
